@@ -91,32 +91,49 @@ unsigned int slabs_clsid(const size_t size) {
 /**
  * Determines the chunk sizes and initializes the slab class descriptors
  * accordingly.
+ * limit means allocate the max mem for save.
+ * prealloc means whether allocate when program init.
  */
 void slabs_init(const size_t limit, const double factor, const bool prealloc) {
-    int i = POWER_SMALLEST - 1;
+    int i = POWER_SMALLEST - 1; // i init to 0
+    // check the item structure,
+    // i am confussed, beacuse i can't see the key and value. QA
+    // setting.chunk_size means the chunk structure size or how many chunk size. QA
+    // and see the defination of size, i think size means the mem space which every save key-value operate.
+    // settings.chunk_size means the minspace allocated key+value+flag.
+    // slab class means the set of the same size chunk .
     unsigned int size = sizeof(item) + settings.chunk_size;
 
+    // mem_limit means the max mem space.
     mem_limit = limit;
 
     if (prealloc) {
         /* Allocate everything in a big chunk with malloc */
         mem_base = malloc(mem_limit);
         if (mem_base != NULL) {
-            mem_current = mem_base;
-            mem_avail = mem_limit;
+            mem_current = mem_base; //the mem address
+            mem_avail = mem_limit; //availble mem space size.
         } else {
             fprintf(stderr, "Warning: Failed to allocate requested memory in"
                     " one large chunk.\nWill allocate in smaller chunks\n");
         }
     }
 
+    // this is in program mem space. not in slab which just allocate.
     memset(slabclass, 0, sizeof(slabclass));
 
+    // from POWER_SMALLEST to POWER_LARGEST, it's slab array index(max length)
+    // settings.item_size_max means max item size, the item max size allocated.
+    // this size means current item size, if size is too large to allocate one item in slab space.
     while (++i < POWER_LARGEST && size <= settings.item_size_max / factor) {
         /* Make sure items are always n-byte aligned */
+        // for cpu can deal with the data quick. the first byte must can drive by 8 bite.        
         if (size % CHUNK_ALIGN_BYTES)
             size += CHUNK_ALIGN_BYTES - (size % CHUNK_ALIGN_BYTES);
 
+        // every key+value+flag size in this slab class
+        // perslab means how many item in this slab, why calculate the number through this way.
+        // if defination the number, the init should support the max size of item which is reasonable.
         slabclass[i].size = size;
         slabclass[i].perslab = settings.item_size_max / slabclass[i].size;
         size *= factor;
@@ -143,6 +160,7 @@ void slabs_init(const size_t limit, const double factor, const bool prealloc) {
 
     }
 
+    // if prealloc then allocated a 1MB slab in every size class.
     if (prealloc) {
         slabs_preallocate(power_largest);
     }

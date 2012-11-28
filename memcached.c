@@ -4702,7 +4702,7 @@ int main (int argc, char **argv) {
     int maxcore = 0;
     char *username = NULL;
     char *pid_file = NULL;
-    struct passwd *pw;
+    struct passwd *pw;    
     struct rlimit rlim;
     char unit = '\0';
     int size_max = 0;
